@@ -12,15 +12,15 @@ class Task {
     required this.date,
     this.isCompleted = false,
   });
-
-  // Convert a Task into a Map
+  // Convert a Task into a Map. The keys must correspond to the names of the
+  // columns in the database.
   Map<String, dynamic> toMap() {
     return {
       'id': id,
       'title': title,
       'description': description,
       'date': date.toIso8601String(),
-      'isCompleted': isCompleted,
+      'isCompleted': isCompleted ? 1 : 0, // SQLite stores booleans as integers
     };
   }
 
@@ -31,7 +31,14 @@ class Task {
       title: map['title'],
       description: map['description'],
       date: DateTime.parse(map['date']),
-      isCompleted: map['isCompleted'],
+      isCompleted: map['isCompleted'] == 1, // Convert integer back to boolean
     );
+  }
+
+  // Implement toString to make it easier to see information about
+  // each task when using the print statement.
+  @override
+  String toString() {
+    return 'Task{id: $id, title: $title, description: $description, date: $date, isCompleted: $isCompleted}';
   }
 }

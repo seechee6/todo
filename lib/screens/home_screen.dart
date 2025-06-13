@@ -4,6 +4,7 @@ import '../models/task.dart';
 import '../services/task_service.dart';
 import 'task_form_screen.dart';
 import 'calendar_screen.dart';
+import 'debug_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -28,12 +29,29 @@ class _HomeScreenState extends State<HomeScreen> {
       _isLoading = true;
     });
 
-    final tasks = await _taskService.getTasks();
+    try {
+      print('HomeScreen: Loading tasks...');
+      final tasks = await _taskService.getTasks();
+      print('HomeScreen: Loaded ${tasks.length} tasks');
 
-    setState(() {
-      _tasks = tasks;
-      _isLoading = false;
-    });
+      setState(() {
+        _tasks = tasks;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('HomeScreen: Error loading tasks: $e');
+      setState(() {
+        _tasks = [];
+        _isLoading = false;
+      });
+
+      // Show error to user
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading tasks: $e')));
+      }
+    }
   }
 
   void _deleteTask(String taskId) async {
@@ -67,6 +85,16 @@ class _HomeScreenState extends State<HomeScreen> {
         foregroundColor: Colors.white,
         actions: [
           IconButton(
+            icon: const Icon(Icons.bug_report),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const DebugScreen()),
+              );
+            },
+            tooltip: 'Debug Database',
+          ),
+          IconButton(
             icon: const Icon(Icons.calendar_month),
             onPressed: () async {
               await Navigator.push(
@@ -80,9 +108,40 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body:
           _isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 16),
+                  const Text('Loading tasks...'),
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _isLoading = false;
+                        _tasks = [];
+                      });
+                    },
+                    child: const Text('Skip Loading'),
+                  ),
+                ],
+              )
               : _tasks.isEmpty
-              ? const Center(child: Text('No tasks yet. Add a task!'))
+              ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.task_alt, size: 64, color: Colors.grey),
+                    const SizedBox(height: 16),
+                    const Text('No tasks yet. Add a task!'),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () => _loadTasks(),
+                      child: const Text('Refresh'),
+                    ),
+                  ],
+                ),
+              )
               : ListView.builder(
                 itemCount: _tasks.length,
                 itemBuilder: (context, index) {
